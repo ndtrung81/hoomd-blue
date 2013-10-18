@@ -58,7 +58,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #error This header cannot be compiled by nvcc
 #endif
 
-#include "TwoStepNVERigid.h"
+#include "TwoStepNHRigid.h"
 
 #include <vector>
 #include <boost/shared_ptr.hpp>
@@ -67,48 +67,37 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define __TWO_STEP_NVT_RIGID_H__
 
 //! Updates particle positions and velocities
-/*! This updater performes constant N, constant volume, constant temperature (NVT) dynamics. Particle positions and velocities are
-    updated according to the velocity verlet algorithm. The forces that drive this motion are defined external to this class
-    in ForceCompute. Any number of ForceComputes can be given, the resulting forces will be summed to produce a net force on
-    each particle.
-
+/*! This updater performes constant N, constant volume, constant temperature (NVT) dynamics.
+    
     Integrator variables mapping:
      - [0] -> eta_t
      - [1] -> eta_r
      - [2] -> eta_dot_t
      - [3] -> eta_dot_r
-
+    
     \ingroup updaters
 */
 
-class TwoStepNVTRigid : public TwoStepNVERigid
+class TwoStepNVTRigid : public TwoStepNHRigid
     {
     public:
         //! Constructor
-        TwoStepNVTRigid(boost::shared_ptr<SystemDefinition> sysdef,
+        TwoStepNVTRigid(boost::shared_ptr<SystemDefinition> sysdef, 
                         boost::shared_ptr<ParticleGroup> group,
                         boost::shared_ptr<ComputeThermo> thermo,
                         boost::shared_ptr<Variant> T,
                         Scalar tau=10.0,
-                        bool skip_restart=false);
+                        unsigned int tchain=5,
+                        unsigned int iter=5);
         ~TwoStepNVTRigid();
 
-        //! Setup the initial net forces, torques and angular momenta
-        void setup();
-
-        //! First step of velocit Verlet integration
-        virtual void integrateStepOne(unsigned int timestep);
-
-        //! Second step of velocit Verlet integration
-        virtual void integrateStepTwo(unsigned int timestep);
+        virtual void setup(); 
 
     protected:
-        //! Integrator variables
-        virtual void setRestartIntegratorVariables();
-
     };
 
 //! Exports the TwoStepNVTRigid class to python
 void export_TwoStepNVTRigid();
 
 #endif
+

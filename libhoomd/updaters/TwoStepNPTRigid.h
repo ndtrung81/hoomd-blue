@@ -67,12 +67,12 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 //! Integrates part of the system forward in two steps in the NPT ensemble
 /*! Implements Nose-Hoover NPT integration through the IntegrationMethodTwoStep interface
-
+    
     This class and TwoStepNVTRigid are supposed to be re-organized due to shared member functions
-
+    
     \ingroup updaters
 */
-class TwoStepNPTRigid : public TwoStepNVERigid
+class TwoStepNPTRigid : public TwoStepNHRigid
     {
     public:
         //! Constructs the integration method and associates it with the system
@@ -84,24 +84,21 @@ class TwoStepNPTRigid : public TwoStepNVERigid
                    Scalar tauP,
                    boost::shared_ptr<Variant> T,
                    boost::shared_ptr<Variant> P,
-                   bool skip_restart=false);
+                   couplingMode couple,
+                   unsigned int flags,
+                   unsigned int tchain=5,
+                   unsigned int pchain=5,
+                   unsigned int iter=5);
         virtual ~TwoStepNPTRigid();
-
+        
         //! Computes initial forces and torques and initializes thermostats/barostats
         virtual void setup();
-
-        //! Performs the first step of the integration
-        virtual void integrateStepOne(unsigned int timestep);
-
-        //! Performs the second step of the integration
-        virtual void integrateStepTwo(unsigned int timestep);
-
+    
     protected:
-        //! Integrator variables
-        virtual void setRestartIntegratorVariables();
     };
 
 //! Exports the TwoStepNVTRigid class to python
 void export_TwoStepNPTRigid();
 
 #endif // #ifndef __TWO_STEP_NPT_RIGID_H__
+
