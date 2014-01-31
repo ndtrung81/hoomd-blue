@@ -126,9 +126,13 @@ ExecutionConfiguration::ExecutionConfiguration(bool min_cpu,
         {
         exec_mode = GPU;
 
+        #ifndef ENABLE_MPI_CUDA
         // if we are not running in compute exclusive mode, use
         // local MPI rank as preferred GPU id
         int gpu_id_hint = m_system_compute_exclusive ? -1 : guessLocalRank();
+        #else
+        int gpu_id_hint = -1;
+        #endif
         initializeGPU(gpu_id_hint, min_cpu);
 
         // initialize cached allocator
@@ -399,7 +403,7 @@ void ExecutionConfiguration::initializeGPU(int gpu_id, bool min_cpu)
     #else
     if (gpu_id != -1)
         {
-        msg->error() << "Manual GPU selection in cuda-aware MPI builds is not supported." << endl;
+        msg->error() << "Specifying the device id in cuda-aware MPI builds is currently not supported." << endl;
         throw runtime_error("Error initializing execution configuration");
         }
     #endif
