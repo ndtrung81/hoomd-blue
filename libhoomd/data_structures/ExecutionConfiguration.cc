@@ -387,7 +387,7 @@ void ExecutionConfiguration::initializeGPU(int gpu_id, bool min_cpu)
         throw runtime_error("Error initializing execution configuration");
         }
 
-    #ifndef ENABLE_MPI
+    #ifndef ENABLE_MPI_CUDA
     if (gpu_id >= (int)getNumTotalGPUs())
         {
         msg->error() << "The specified GPU id (" << gpu_id << ") is not present in the system." << endl;
