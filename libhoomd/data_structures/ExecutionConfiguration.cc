@@ -354,8 +354,12 @@ void ExecutionConfiguration::initializeGPU(int gpu_id, bool min_cpu)
         }
 
     // setup the flags
+    #ifndef ENABLE_MPI_CUDA
     int flags = 0;
+    #endif
+
     if (min_cpu)
+    #ifndef ENABLE_MPI_CUDA
         {
         if (CUDART_VERSION < 2020)
             msg->warning() << "--minimize-cpu-usage will have no effect because this hoomd was built " << endl;
@@ -367,6 +371,11 @@ void ExecutionConfiguration::initializeGPU(int gpu_id, bool min_cpu)
         {
         flags |= cudaDeviceScheduleSpin;
         }
+    #else
+        {
+        msg->warning() << "--minimize-cpu-usage has no effect in MPI_CUDA builds." << endl;
+        }
+    #endif
 
     if (gpu_id < -1)
         {
@@ -374,6 +383,7 @@ void ExecutionConfiguration::initializeGPU(int gpu_id, bool min_cpu)
         throw runtime_error("Error initializing execution configuration");
         }
 
+    #ifndef ENABLE_MPI
     if (gpu_id >= (int)getNumTotalGPUs())
         {
         msg->error() << "The specified GPU id (" << gpu_id << ") is not present in the system." << endl;
@@ -386,7 +396,15 @@ void ExecutionConfiguration::initializeGPU(int gpu_id, bool min_cpu)
         msg->error() << "The specified GPU id (" << gpu_id << ") is not available for executing HOOMD." << endl;
         throw runtime_error("Error initializing execution configuration");
         }
+    #else
+    if (gpu_id != -1)
+        {
+        msg->error() << "Manual GPU selection in cuda-aware MPI builds is not supported." << endl;
+        throw runtime_error("Error initializing execution configuration");
+        }
+    #endif
 
+    #ifndef ENABLE_MPI_CUDA
     cudaSetDeviceFlags(flags | cudaDeviceMapHost);
     cudaSetValidDevices(&m_gpu_list[0], (int)m_gpu_list.size());
 
@@ -395,11 +413,26 @@ void ExecutionConfiguration::initializeGPU(int gpu_id, bool min_cpu)
         cudaSetDevice(gpu_id);
         }
     else
+    #endif
         {
         // initialize the default CUDA context
         cudaFree(0);
         }
     checkCUDAError(__FILE__, __LINE__);
+    }
+
+//! Set required device flags
+void ExecutionConfiguration::earlyInitializeGPU()
+    {
+    cudaSetDeviceFlags(cudaDeviceMapHost);
+    cudaError_t err = cudaGetLastError();
+    if (err != cudaSuccess)
+        {
+        std::cerr << "***Error! Early GPU initialization failed in "
+            << __FILE__ << " line " << __LINE__  << "! No device present?"
+            << std::endl;
+        throw std::runtime_error("Error during early GPU initialization.");
+        }
     }
 
 /*! Prints out a status line for the selected GPU

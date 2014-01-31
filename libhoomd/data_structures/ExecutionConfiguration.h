@@ -247,6 +247,11 @@ struct ExecutionConfiguration : boost::noncopyable
         }
     #endif
 
+    #ifdef ENABLE_CUDA
+    //! Early initialization of the GPU (before MPI_Init)
+    static void earlyInitializeGPU();
+    #endif
+
 private:
 #ifdef ENABLE_CUDA
     //! Initialize the GPU with the given id

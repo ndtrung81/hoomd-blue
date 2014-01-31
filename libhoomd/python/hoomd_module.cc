@@ -406,6 +406,11 @@ void initialize_mpi()
     putenv(env_enable_mpi_cuda_cray);
     #endif
 
+    #ifdef ENABLE_MPI_CUDA
+    // do pre-MPI_Init GPU initialization
+    ExecutionConfiguration::earlyInitializeGPU();
+    #endif
+
     // initalize MPI
     MPI_Init(0, (char ***) NULL);
     }
