@@ -120,10 +120,10 @@ void CommunicatorGPU::allocateBuffers()
     /*
      * Particle migration
      */
-    GPUVector<pdata_element> gpu_sendbuf(m_exec_conf,mapped);
+    GPUVector<pdata_element> gpu_sendbuf(m_exec_conf);
     m_gpu_sendbuf.swap(gpu_sendbuf);
 
-    GPUVector<pdata_element> gpu_recvbuf(m_exec_conf,mapped);
+    GPUVector<pdata_element> gpu_recvbuf(m_exec_conf);
     m_gpu_recvbuf.swap(gpu_recvbuf);
 
     // Communciation flags for every particle sent
