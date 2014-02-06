@@ -224,8 +224,15 @@ class CommunicatorGPU : public Communicator
 
         std::vector<std::vector<unsigned int> > m_n_send_ghosts; //!< Number of ghosts to send per stage and neighbor
         std::vector<std::vector<unsigned int> > m_n_recv_ghosts; //!< Number of ghosts to receive per stage and neighbor
-        std::vector<std::vector<unsigned int> > m_ghost_offs;    //!< Begin of offset in recv buf per stage and neighbor
-
+        std::vector<std::vector<unsigned int> > m_ghost_recv_offs;//!< Begin offset in recv buf per stage and neighbor
+        std::vector<std::vector<unsigned int> > m_ghost_send_offs;//!< Begin offset in send buf per stage and neighbor
+        std::vector<std::vector<unsigned int> > m_n_max_send_ghosts; //!< Maximum number of ghosts to send per stage and neighbor
+        std::vector<std::vector<unsigned int> > m_n_max_recv_ghosts; //!< Maximum number of ghosts to receive per stage and neighbor
+        std::vector<GPUVector<unsigned int> > m_ghost_recv_idx; //!< Indices of ghosts in recv buffer
+        std::vector<GPUVector<unsigned int> > m_ghost_send_idx; //!< Indices of ghosts in send buffer
+ 
+        float m_ghost_resize_factor;                   //!< Factor to use for amortized buffer resizing
+ 
         std::vector<unsigned int> m_n_send_ghosts_tot; //!< Total number of sent ghosts per stage
         std::vector<unsigned int> m_n_recv_ghosts_tot; //!< Total number of received ghosts per stage
 

@@ -696,12 +696,13 @@ __global__ void gpu_pack_kernel(
     unsigned int n_out,
     const uint2 *d_ghost_idx_adj,
     const T *in,
-    T *out)
+    T *out,
+    const unsigned int *d_ghost_send_idx)
     {
-    unsigned int buf_idx = blockIdx.x*blockDim.x + threadIdx.x;
-    if (buf_idx >= n_out) return;
-    unsigned int idx = d_ghost_idx_adj[buf_idx].x;
-    out[buf_idx] = in[idx];
+    unsigned int send_idx = blockIdx.x*blockDim.x + threadIdx.x;
+    if (send_idx >= n_out) return;
+    unsigned int idx = d_ghost_idx_adj[send_idx].x;
+    out[d_ghost_send_idx[send_idx]] = in[idx];
     }
 
 __global__ void gpu_pack_wrap_kernel(
@@ -711,12 +712,13 @@ __global__ void gpu_pack_wrap_kernel(
     Scalar4 *out,
     Index3D di,
     uint3 my_pos,
-    BoxDim box)
+    BoxDim box,
+    const unsigned int *d_ghost_send_idx)
     {
-    unsigned int buf_idx = blockIdx.x*blockDim.x + threadIdx.x;
-    if (buf_idx >= n_out) return;
+    unsigned int send_idx = blockIdx.x*blockDim.x + threadIdx.x;
+    if (send_idx >= n_out) return;
 
-    uint2 idx_adj = d_ghost_idx_adj[buf_idx];
+    uint2 idx_adj = d_ghost_idx_adj[send_idx];
     unsigned int idx = idx_adj.x;
     unsigned int adj = idx_adj.y;
 
@@ -780,7 +782,7 @@ __global__ void gpu_pack_wrap_kernel(
     Scalar4 postype = in[idx];
     box.wrap(postype, img, wrap);
 
-    out[buf_idx] = postype;
+    out[d_ghost_send_idx[send_idx]] = postype;
     }
 
 void gpu_exchange_ghosts_pack(
@@ -804,18 +806,19 @@ void gpu_exchange_ghosts_pack(
     bool send_charge,
     bool send_diameter,
     bool send_orientation,
+    const unsigned int *d_ghost_send_idx,
     const Index3D &di,
     uint3 my_pos,
     const BoxDim& box)
     {
     unsigned int block_size = 256;
     unsigned int n_blocks = n_out/block_size + 1;
-    if (send_tag) gpu_pack_kernel<<<n_blocks, block_size>>>(n_out, d_ghost_idx_adj, d_tag, d_tag_sendbuf);
-    if (send_pos) gpu_pack_wrap_kernel<<<n_blocks, block_size>>>(n_out, d_ghost_idx_adj, d_pos, d_pos_sendbuf, di, my_pos, box);
-    if (send_vel) gpu_pack_kernel<<<n_blocks, block_size>>>(n_out, d_ghost_idx_adj, d_vel, d_vel_sendbuf);
-    if (send_charge) gpu_pack_kernel<<<n_blocks, block_size>>>(n_out, d_ghost_idx_adj, d_charge, d_charge_sendbuf);
-    if (send_diameter) gpu_pack_kernel<<<n_blocks, block_size>>>(n_out, d_ghost_idx_adj, d_diameter, d_diameter_sendbuf);
-    if (send_orientation) gpu_pack_kernel<<<n_blocks, block_size>>>(n_out, d_ghost_idx_adj, d_orientation, d_orientation_sendbuf);
+    if (send_tag) gpu_pack_kernel<<<n_blocks, block_size>>>(n_out, d_ghost_idx_adj, d_tag, d_tag_sendbuf,d_ghost_send_idx);
+    if (send_pos) gpu_pack_wrap_kernel<<<n_blocks, block_size>>>(n_out, d_ghost_idx_adj, d_pos, d_pos_sendbuf, di, my_pos, box,d_ghost_send_idx);
+    if (send_vel) gpu_pack_kernel<<<n_blocks, block_size>>>(n_out, d_ghost_idx_adj, d_vel, d_vel_sendbuf,d_ghost_send_idx);
+    if (send_charge) gpu_pack_kernel<<<n_blocks, block_size>>>(n_out, d_ghost_idx_adj, d_charge, d_charge_sendbuf,d_ghost_send_idx);
+    if (send_diameter) gpu_pack_kernel<<<n_blocks, block_size>>>(n_out, d_ghost_idx_adj, d_diameter, d_diameter_sendbuf,d_ghost_send_idx);
+    if (send_orientation) gpu_pack_kernel<<<n_blocks, block_size>>>(n_out, d_ghost_idx_adj, d_orientation, d_orientation_sendbuf,d_ghost_send_idx);
     }
 
 void gpu_communicator_initialize_cache_config()
@@ -830,11 +833,12 @@ template<typename T>
 __global__ void gpu_unpack_kernel(
     unsigned int n_in,
     const T *in,
-    T *out)
+    T *out,
+    const unsigned int *d_ghost_recv_idx)
     {
-    unsigned int buf_idx = blockIdx.x*blockDim.x + threadIdx.x;
-    if (buf_idx >= n_in) return;
-    out[buf_idx] = in[buf_idx];
+    unsigned int recv_idx = blockIdx.x*blockDim.x + threadIdx.x;
+    if (recv_idx >= n_in) return;
+    out[recv_idx] = in[d_ghost_recv_idx[recv_idx]];
     }
 
 
@@ -857,16 +861,17 @@ void gpu_exchange_ghosts_copy_buf(
     bool send_vel,
     bool send_charge,
     bool send_diameter,
-    bool send_orientation)
+    bool send_orientation,
+    const unsigned int *d_ghost_recv_idx)
     {
     unsigned int block_size = 256;
     unsigned int n_blocks = n_recv/block_size + 1;
-    if (send_tag) gpu_unpack_kernel<unsigned int><<<n_blocks, block_size>>>(n_recv, d_tag_recvbuf, d_tag);
-    if (send_pos) gpu_unpack_kernel<Scalar4><<<n_blocks, block_size>>>(n_recv, d_pos_recvbuf, d_pos);
-    if (send_vel) gpu_unpack_kernel<Scalar4><<<n_blocks, block_size>>>(n_recv, d_vel_recvbuf, d_vel);
-    if (send_charge) gpu_unpack_kernel<Scalar><<<n_blocks, block_size>>>(n_recv, d_charge_recvbuf, d_charge);
-    if (send_diameter) gpu_unpack_kernel<Scalar><<<n_blocks, block_size>>>(n_recv, d_diameter_recvbuf, d_diameter);
-    if (send_orientation) gpu_unpack_kernel<Scalar4><<<n_blocks, block_size>>>(n_recv, d_orientation_recvbuf, d_orientation);
+    if (send_tag) gpu_unpack_kernel<unsigned int><<<n_blocks, block_size>>>(n_recv, d_tag_recvbuf, d_tag,d_ghost_recv_idx);
+    if (send_pos) gpu_unpack_kernel<Scalar4><<<n_blocks, block_size>>>(n_recv, d_pos_recvbuf, d_pos,d_ghost_recv_idx);
+    if (send_vel) gpu_unpack_kernel<Scalar4><<<n_blocks, block_size>>>(n_recv, d_vel_recvbuf, d_vel,d_ghost_recv_idx);
+    if (send_charge) gpu_unpack_kernel<Scalar><<<n_blocks, block_size>>>(n_recv, d_charge_recvbuf, d_charge,d_ghost_recv_idx);
+    if (send_diameter) gpu_unpack_kernel<Scalar><<<n_blocks, block_size>>>(n_recv, d_diameter_recvbuf, d_diameter,d_ghost_recv_idx);
+    if (send_orientation) gpu_unpack_kernel<Scalar4><<<n_blocks, block_size>>>(n_recv, d_orientation_recvbuf, d_orientation,d_ghost_recv_idx);
     }
 
 void gpu_compute_ghost_rtags(
