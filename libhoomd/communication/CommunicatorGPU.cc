@@ -1554,8 +1554,9 @@ void CommunicatorGPU::exchangeGhosts()
                 else
                     {
                     // use amortized buffer resizing
-                    m_n_max_send_ghosts[stage][ineigh] = ((float)m_n_max_send_ghosts[stage][ineigh]
-                        * m_ghost_resize_factor)+1;
+                    while (m_n_max_send_ghosts[stage][ineigh] < m_n_send_ghosts[stage][ineigh])
+                        m_n_max_send_ghosts[stage][ineigh] = ((float)m_n_max_send_ghosts[stage][ineigh]
+                            * m_ghost_resize_factor)+1;
                     }
                 }
             }
@@ -1705,8 +1706,9 @@ void CommunicatorGPU::exchangeGhosts()
                 else
                     {
                     // use amortized buffer resizing
-                    m_n_max_recv_ghosts[stage][ineigh] = (((float)m_n_max_recv_ghosts[stage][ineigh])
-                        * m_ghost_resize_factor)+1;
+                    while (m_n_max_recv_ghosts[stage][ineigh] < m_n_recv_ghosts[stage][ineigh])
+                        m_n_max_recv_ghosts[stage][ineigh] = (((float)m_n_max_recv_ghosts[stage][ineigh])
+                            * m_ghost_resize_factor)+1;
                     }
                 }
             }
