@@ -87,6 +87,13 @@ Integrator::Integrator(boost::shared_ptr<SystemDefinition> sysdef, Scalar deltaT
 
 Integrator::~Integrator()
     {
+    #ifdef ENABLE_MPI
+    // disconnect
+    if (m_request_flags_connection.connected())
+        m_request_flags_connection.disconnect();
+    if (m_callback_connection.connected())
+        m_callback_connection.disconnect();
+    #endif
     }
 
 /*! \param fc ForceCompute to add
@@ -263,12 +270,10 @@ void Integrator::computeAccelerations(unsigned int timestep)
 #ifdef ENABLE_MPI
     if (m_comm)
         {
-        // preset flags for ghost communication
-        m_comm->setFlags(determineFlags(timestep));
-
         // Move particles between domains. This ensures
         // a) that particles have migrated to the correct domains
         // b) that forces are calculated correctly, if additionally ghosts are updated every timestep
+        m_comm->forceMigrate();
         m_comm->communicate(timestep);
         }
 #endif
@@ -850,6 +855,34 @@ CommFlags Integrator::determineFlags(unsigned int timestep)
         flags |= (*force_constraint)->getRequestedCommFlags(timestep);
 
     return flags;
+    }
+
+
+void Integrator::setCommunicator(boost::shared_ptr<Communicator> comm)
+    {
+    // call base class method
+    Updater::setCommunicator(comm);
+
+    // connect to ghost communication flags request
+    if (! m_request_flags_connection.connected() && m_comm)
+        m_comm->addCommFlagsRequest(boost::bind(&Integrator::determineFlags, this, _1));
+
+    if (! m_callback_connection.connected() && m_comm)
+        m_callback_connection = comm->addComputeCallback(bind(&Integrator::computeCallback, this, _1));
+    }
+
+void Integrator::computeCallback(unsigned int timestep)
+    {
+    // pre-compute all active forces
+    std::vector< boost::shared_ptr<ForceCompute> >::iterator force_compute;
+
+    for (force_compute = m_forces.begin(); force_compute != m_forces.end(); ++force_compute)
+        (*force_compute)->preCompute(timestep);
+
+    // pre-compute all active constraint forces
+    std::vector< boost::shared_ptr<ForceConstraint> >::iterator force_constraint;
+    for (force_constraint = m_constraint_forces.begin(); force_constraint != m_constraint_forces.end(); ++force_constraint)
+        (*force_constraint)->preCompute(timestep);
     }
 #endif
 

@@ -83,9 +83,9 @@ _default_block_size_db['2.0'] = {'pair.ewald': 416, 'improper.harmonic': 160, 'p
 # it is no longer convenient to tune on 2.1, just set values to 2.0
 _default_block_size_db['2.1'] = _default_block_size_db['2.0'];
 
-_default_block_size_db['3.0'] = {'pair.ewald': 192, 'improper.harmonic': 128, 'pair.dpd_conservative': 128, 'bond.harmonic': 128, 'dihedral.harmonic': 64, 'pair.dpd': 96, 'angle.cgcmm': 64, 'pair.force_shifted_lj': 128, 'nlist.filter': 128, 'pair.lj': 128, 'pair.table': 128, 'pair.cgcmm': 96, 'pair.dpdlj': 96, 'pair.slj': 128, 'pair.morse': 256, 'nlist': 320, 'bond.table': 96, 'pair.yukawa': 128, 'bond.fene': 128, 'angle.harmonic': 128, 'pair.gauss': 128}
+_default_block_size_db['3.0'] = {'pair.ewald': 192, 'improper.harmonic': 128, 'pair.dpd_conservative': 128, 'bond.harmonic': 128, 'dihedral.harmonic': 64, 'pair.dpd': 96, 'angle.cgcmm': 64, 'pair.force_shifted_lj': 128, 'nlist.filter': 128, 'pair.lj': 128, 'pair.table': 128, 'pair.cgcmm': 96, 'pair.dpdlj': 96, 'pair.slj': 128, 'pair.morse': 256, 'nlist': 128, 'bond.table': 96, 'pair.yukawa': 128, 'bond.fene': 128, 'angle.harmonic': 128, 'pair.gauss': 128}
 
-_default_block_size_db['3.5'] = {'pair.ewald': 192, 'improper.harmonic': 128, 'pair.dpd_conservative': 128, 'bond.harmonic': 128, 'dihedral.harmonic': 64, 'pair.dpd': 96, 'angle.cgcmm': 64, 'pair.force_shifted_lj': 128, 'nlist.filter': 128, 'pair.lj': 128, 'pair.table': 128, 'pair.cgcmm': 96, 'pair.dpdlj': 96, 'pair.slj': 128, 'pair.morse': 256, 'nlist': 320, 'bond.table': 96, 'pair.yukawa': 128, 'bond.fene': 128, 'angle.harmonic': 128, 'pair.gauss': 128}
+_default_block_size_db['3.5'] = {'pair.ewald': 192, 'improper.harmonic': 128, 'pair.dpd_conservative': 128, 'bond.harmonic': 128, 'dihedral.harmonic': 64, 'pair.dpd': 96, 'angle.cgcmm': 64, 'pair.force_shifted_lj': 128, 'nlist.filter': 128, 'pair.lj': 128, 'pair.table': 128, 'pair.cgcmm': 96, 'pair.dpdlj': 96, 'pair.slj': 128, 'pair.morse': 256, 'nlist': 128, 'bond.table': 96, 'pair.yukawa': 128, 'bond.fene': 128, 'angle.harmonic': 128, 'pair.gauss': 128}
 
 ## \internal
 # \brief Optimal block size database user can load to override the defaults
@@ -197,8 +197,8 @@ def _get_optimal_block_size(name):
         if name in _default_block_size_db[compute_cap]:
             return _default_block_size_db[compute_cap][name];
         else:
-            globals.msg.error("Default block size db does not contain a value for " + str(name) + ".\n");
-            raise RuntimeError("Error retrieving optimal block size");
+            globals.msg.warning("Default block size db does not contain a value for " + str(name) + ".\n");
+            return 64
     else:
         globals.msg.warning("Optimal block size tuning values are not present for your hardware with compute capability " + str(compute_cap) + "\n");
         globals.msg.warning("To obtain better performance, execute the following hoomd script to determine the optimal\n");

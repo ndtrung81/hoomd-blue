@@ -59,12 +59,10 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #endif
 
 #include "ParticleData.h"
-#include "BondData.h"
 #include "WallData.h"
 #include "RigidData.h"
-#include "AngleData.h"
-#include "DihedralData.h"
 #include "IntegratorData.h"
+#include "BondedGroupData.h"
 
 #include <boost/shared_ptr.hpp>
 
@@ -102,7 +100,7 @@ class SnapshotSystemData;
     \b good \b thing ^TM, as it promotes good separation and isolation of the various classes responsibilities.
 
     In rare circumstances, a references back really is required (i.e. notification of referring classes when
-    ParticleData resorts particles). Any event based notifications of such should be managed with boost::signals.
+    ParticleData resorts particles). Any event based notifications of such should be managed with boost::signals2.
     Any ongoing references where two data structure classes are so interwoven that they must constantly refer to
     each other should be avoided (consider merging them into one class).
 
@@ -176,7 +174,7 @@ class SystemDefinition
             return m_dihedral_data;
             }
         //! Access the improper data defined for the simulation
-        boost::shared_ptr<DihedralData> getImproperData()
+        boost::shared_ptr<ImproperData> getImproperData()
             {
             return m_improper_data;
             }
@@ -214,7 +212,7 @@ class SystemDefinition
         boost::shared_ptr<RigidData> m_rigid_data;          //!< Rigid bodies data for the system
         boost::shared_ptr<AngleData> m_angle_data;          //!< Angle data for the system
         boost::shared_ptr<DihedralData> m_dihedral_data;    //!< Dihedral data for the system
-        boost::shared_ptr<DihedralData> m_improper_data;    //!< Improper data for the system
+        boost::shared_ptr<ImproperData> m_improper_data;    //!< Improper data for the system
         boost::shared_ptr<IntegratorData> m_integrator_data;    //!< Integrator data for the system
     };
 

@@ -103,21 +103,10 @@ typedef float4 Scalar4;
 typedef double Scalar;
 //! Floating point type with x,y elements (double precision)
 typedef double2 Scalar2;
-//! Floating point type with x,y,z elements
-struct Scalar3
-    {
-    double x;   //!< x component
-    double y;   //!< y component
-    double z;   //!< z component
-    };
+//! Floating point type with x,y,z elements (double precision)
+typedef double3 Scalar3;
 //! Floating point type with x,y,z,w elements (double precision)
-struct Scalar4
-    {
-    double x;   //!< x component
-    double y;   //!< y component
-    double z;   //!< z component
-    double w;   //!< w component
-    };
+typedef double4 Scalar4;
 #endif
 
 //! make a scalar2 value
@@ -153,7 +142,7 @@ HOSTDEVICE inline Scalar4 make_scalar4(Scalar x, Scalar y, Scalar z, Scalar w)
 //! Stuff an integer inside a Scalar
 HOSTDEVICE inline Scalar __int_as_scalar(int a)
     {
-    volatile union
+    union
         {
         int a; Scalar b;
         } u;
@@ -166,7 +155,7 @@ HOSTDEVICE inline Scalar __int_as_scalar(int a)
 //! Extract an integer from a Scalar stuffed by __int_as_scalar()
 HOSTDEVICE inline int __scalar_as_int(Scalar b)
     {
-    volatile union
+    union
         {
         int a; Scalar b;
         } u;

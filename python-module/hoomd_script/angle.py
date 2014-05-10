@@ -181,14 +181,14 @@ class coeff:
             raise RuntimeError('Error verifying force coefficients');
 
         # get a list of types from the particle data
-        ntypes = globals.system_definition.getAngleData().getNAngleTypes();
+        ntypes = globals.system_definition.getAngleData().getNTypes();
         type_list = [];
-        for i in xrange(0,ntypes):
+        for i in range(0,ntypes):
             type_list.append(globals.system_definition.getAngleData().getNameByType(i));
 
         valid = True;
         # loop over all possible types and verify that all required variables are set
-        for i in xrange(0,ntypes):
+        for i in range(0,ntypes):
             type = type_list[i];
 
             if type not in self.values.keys():
@@ -251,7 +251,7 @@ class coeff:
 # set_coeff().
 #
 # \note Specifying the angle.harmonic command when no angles are defined in the simulation results in an error.
-# \MPI_NOT_SUPPORTED
+# \MPI_SUPPORTED
 class harmonic(force._force):
     ## Specify the %harmonic %angle %force
     #
@@ -262,7 +262,7 @@ class harmonic(force._force):
     def __init__(self):
         util.print_status_line();
         # check that some angles are defined
-        if globals.system_definition.getAngleData().getNumAngles() == 0:
+        if globals.system_definition.getAngleData().getNGlobal() == 0:
             globals.msg.error("No angles are defined.\n");
             raise RuntimeError("Error creating angle forces");
 
@@ -312,7 +312,7 @@ class harmonic(force._force):
 
     def update_coeffs(self):
         # get a list of all angle types in the simulation
-        ntypes = globals.system_definition.getAngleData().getNAngleTypes();
+        ntypes = globals.system_definition.getAngleData().getNTypes();
         type_list = [];
         for i in range(0,ntypes):
             type_list.append(globals.system_definition.getAngleData().getNameByType(i));
@@ -362,7 +362,7 @@ class harmonic(force._force):
 # set_coeff().
 #
 # \note Specifying the angle.cgcmm command when no angles are defined in the simulation results in an error.
-# \MPI_NOT_SUPPORTED
+# \MPI_SUPPORTED
 class cgcmm(force._force):
     ## Specify the %cgcmm %angle %force
     #
@@ -373,7 +373,7 @@ class cgcmm(force._force):
     def __init__(self):
         util.print_status_line();
         # check that some angles are defined
-        if globals.system_definition.getAngleData().getNumAngles() == 0:
+        if globals.system_definition.getAngleData().getNGlobal() == 0:
             globals.msg.error("No angles are defined.\n");
             raise RuntimeError("Error creating CGCMM angle forces");
 
@@ -459,7 +459,7 @@ class cgcmm(force._force):
 
     def update_coeffs(self):
         # get a list of all angle types in the simulation
-        ntypes = globals.system_definition.getAngleData().getNAngleTypes();
+        ntypes = globals.system_definition.getAngleData().getNTypes();
         type_list = [];
         for i in range(0,ntypes):
             type_list.append(globals.system_definition.getAngleData().getNameByType(i));
@@ -589,14 +589,14 @@ class table(force._force):
 
     def update_angle_table(self, atype, func, coeff):
         # allocate arrays to store V and F
-        Vtable = hoomd.std_vector_float();
-        Ttable = hoomd.std_vector_float();
+        Vtable = hoomd.std_vector_scalar();
+        Ttable = hoomd.std_vector_scalar();
 
         # calculate dth
         dth = math.pi / float(self.width-1);
 
         # evaluate each point of the function
-        for i in xrange(0, self.width):
+        for i in range(0, self.width):
             theta = dth * i;
             (V,T) = func(theta, **coeff);
 
@@ -615,14 +615,14 @@ class table(force._force):
             raise RuntimeError("Error updating angle coefficients");
 
         # set all the params
-        ntypes = globals.system_definition.getAngleData().getNAngleTypes();
+        ntypes = globals.system_definition.getAngleData().getNTypes();
         type_list = [];
-        for i in xrange(0,ntypes):
+        for i in range(0,ntypes):
             type_list.append(globals.system_definition.getAngleData().getNameByType(i));
 
 
         # loop through all of the unique type angles and evaluate the table
-        for i in xrange(0,ntypes):
+        for i in range(0,ntypes):
             func = self.angle_coeff.get(type_list[i], "func");
             coeff = self.angle_coeff.get(type_list[i], "coeff");
 
@@ -685,7 +685,7 @@ class table(force._force):
 
           # check for even spacing
           dth = math.pi / float(self.width-1);
-          for i in xrange(0,self.width):
+          for i in range(0,self.width):
               theta =  dth * i;
               if math.fabs(theta - theta_table[i]) > 1e-3:
                   globals.msg.error("angle.table: theta must be monotonically increasing and evenly spaced\n");

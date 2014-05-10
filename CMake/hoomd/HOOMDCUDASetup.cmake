@@ -11,8 +11,6 @@ if (ENABLE_CUDA)
 		message(SEND_ERROR "CUDA 3.2 and older are not supported")
 	endif (${CUDA_VERSION} VERSION_LESS 4.0)
 
-	include_directories(${CUDA_INCLUDE_DIRS})
-
     # Find Thrust
     find_package(Thrust)
 
@@ -20,6 +18,13 @@ if (ENABLE_CUDA)
         message(SEND_ERROR "Thrust version ${THRUST_VERSION} found, >= 1.5.0 is required")
     endif (${THRUST_VERSION} VERSION_LESS 1.5.0)
 
+    # first thrust, then CUDA (to allow for local thrust installation
+    # that overrides CUDA toolkit)
+    include_directories(${THRUST_INCLUDE_DIR})
+
+	include_directories(${CUDA_INCLUDE_DIRS})
+
+    get_directory_property(DIRS INCLUDE_DIRECTORIES SYSTEM)
     # hide some variables users don't need to see
     mark_as_advanced(CUDA_SDK_ROOT_DIR)
     if (CUDA_TOOLKIT_ROOT_DIR)
@@ -33,17 +38,11 @@ endif (ENABLE_CUDA)
 if (ENABLE_CUDA)
     # setup nvcc to build for all CUDA architectures. Allow user to modify the list if desired
     if (CUDA_VERSION VERSION_GREATER 4.99)
-        set(CUDA_ARCH_LIST 12 13 20 30 35 CACHE STRING "List of target sm_ architectures to compile CUDA code for. Separate with semicolons.")
+        set(CUDA_ARCH_LIST 20 30 35 CACHE STRING "List of target sm_ architectures to compile CUDA code for. Separate with semicolons.")
     elseif (CUDA_VERSION VERSION_GREATER 4.1)
-        set(CUDA_ARCH_LIST 12 13 20 30 CACHE STRING "List of target sm_ architectures to compile CUDA code for. Separate with semicolons.")
+        set(CUDA_ARCH_LIST 20 30 CACHE STRING "List of target sm_ architectures to compile CUDA code for. Separate with semicolons.")
     else()
-        set(CUDA_ARCH_LIST 12 13 20 CACHE STRING "List of target sm_ architectures to compile CUDA code for. Separate with semicolons.")
-    endif()
-
-    # if double precision is on, remove incompatible arches
-    if (NOT SINGLE_PRECISION)
-        list(REMOVE_ITEM CUDA_ARCH_LIST 13 12 11 10)
-        message(STATUS "Double precision build enabled, removing support for compute 1.x")
+        set(CUDA_ARCH_LIST 20 CACHE STRING "List of target sm_ architectures to compile CUDA code for. Separate with semicolons.")
     endif()
 
     foreach(_cuda_arch ${CUDA_ARCH_LIST})
@@ -67,7 +66,7 @@ if (ENABLE_EMBED_CUDA)
 
     # determine the directory of the found cuda libs
     get_filename_component(_cuda_libdir ${CUDA_CUDART_LIBRARY} PATH)
-    FILE(GLOB _cuda_libs ${_cuda_libdir}/libcudart* ${_cuda_libdir}/libcufft*)
+    FILE(GLOB _cuda_libs ${_cuda_libdir}/libcudart.* ${_cuda_libdir}/libcufft.*)
     install(PROGRAMS ${_cuda_libs} DESTINATION ${LIB_INSTALL_DIR})
 
 endif (ENABLE_EMBED_CUDA)

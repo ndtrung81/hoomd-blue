@@ -50,27 +50,28 @@ endif (ENABLE_CUDA)
 
 ############################
 ## MPI related options
-find_package(MPI QUIET)
-if (MPI_FOUND)
+find_package(MPI)
+if (MPI_FOUND OR MPI_C_FOUND OR MPI_CXX_FOUND)
 option(ENABLE_MPI "Enable the compilation of the MPI communication code" on)
-else (MPI_FOUND)
+else ()
 option (ENABLE_MPI "Enable the compilation of the MPI communication code" off)
-endif (MPI_FOUND)
+endif ()
 
 #################################
 ## Optionally enable documentation build
-find_package(Doxygen)
-if (DOXYGEN_FOUND)
-    # get the doxygen version
-    exec_program(${DOXYGEN_EXECUTABLE} ${HOOMD_SOURCE_DIR} ARGS --version OUTPUT_VARIABLE DOXYGEN_VERSION)
+OPTION(ENABLE_DOXYGEN "Enables building of documentation with doxygen" OFF)
+if (ENABLE_DOXYGEN)
+    find_package(Doxygen)
+    if (DOXYGEN_FOUND)
+        # get the doxygen version
+        exec_program(${DOXYGEN_EXECUTABLE} ${HOOMD_SOURCE_DIR} ARGS --version OUTPUT_VARIABLE DOXYGEN_VERSION)
 
-    if (${DOXYGEN_VERSION} VERSION_GREATER 1.5.5)
-        OPTION(ENABLE_DOXYGEN "Enables building of documentation with doxygen" ON)
-    else (${DOXYGEN_VERSION} VERSION_GREATER 1.5.5)
-        message(STATUS "Doxygen version less than 1.5.5, defaulting ENABLE_DOXYGEN=OFF")
-        OPTION(ENABLE_DOXYGEN "Enables building of documentation with doxygen" OFF)
-    endif (${DOXYGEN_VERSION} VERSION_GREATER 1.5.5)
-endif (DOXYGEN_FOUND)
+        if (${DOXYGEN_VERSION} VERSION_GREATER 1.8.4)
+        else (${DOXYGEN_VERSION} VERSION_GREATER 1.8.4)
+            message(STATUS "Doxygen version less than 1.8.5, documentation may not build correctly")
+        endif (${DOXYGEN_VERSION} VERSION_GREATER 1.8.4)
+    endif ()
+endif ()
 
 ################################
 ## detect and optionally enable OpenMP
@@ -83,7 +84,7 @@ if (_cmake_ver VERSION_GREATER 2.6.3)
 
 find_package(OpenMP)
 if (OPENMP_FOUND)
-    option(ENABLE_OPENMP "Enable openmp compliation to accelerate CPU code on multi-core machines" ON)
+    option(ENABLE_OPENMP "Enable openmp compliation to accelerate CPU code on multi-core machines" OFF)
 endif (OPENMP_FOUND)
 
 else (_cmake_ver VERSION_GREATER 2.6.3)

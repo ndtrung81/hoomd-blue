@@ -60,6 +60,8 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "PotentialPair.h"
 #include "PotentialPairGPU.cuh"
 
+#include "Autotuner.h"
+
 /*! \file PotentialPairGPU.h
     \brief Defines the template class for standard pair potentials on the GPU
     \note This header cannot be compiled by nvcc
@@ -97,17 +99,34 @@ class PotentialPairGPU : public PotentialPair<evaluator>
         //! Destructor
         virtual ~PotentialPairGPU() {}
 
-        //! Set the block size to execute on the GPU
-        /*! \param block_size Size of the block to run on the device
-            Performance of the code may be dependant on the block size run
-            on the GPU. \a block_size should be set to be a multiple of 32.
-        */
-        void setBlockSize(int block_size)
+        //! Set the number of threads per particle to execute on the GPU
+        /*! \param threads_per_particl Number of threads per particle
+            \a threads_per_particle must be a power of two and smaller than 32.
+         */
+        void setTuningParam(unsigned int param)
             {
-            m_block_size = block_size;
+            m_param = param;
             }
+
+        #ifdef ENABLE_MPI
+        /*! Precompute the pair force without rebuilding the neighbor list
+         *
+         * \param timestep The time step
+         */
+        virtual void preCompute(unsigned int timestep)
+            {
+            m_precompute = true;
+            this->forceCompute(timestep);
+            m_precompute = false;
+            m_has_been_precomputed = true;
+            }
+        #endif
+
     protected:
-        unsigned int m_block_size;  //!< Block size to execute on the GPU
+        boost::scoped_ptr<Autotuner> m_tuner; //!< Autotuner for block size and threads per particle
+        unsigned int m_param;                 //!< Kernel tuning parameter
+        bool m_precompute;                    //!< True if we are pre-computing the force
+        bool m_has_been_precomputed;          //!< True if the forces have been precomputed
 
         //! Actually compute the forces
         virtual void computeForces(unsigned int timestep);
@@ -118,7 +137,7 @@ template< class evaluator, cudaError_t gpu_cgpf(const pair_args_t& pair_args,
                                                 const typename evaluator::param_type *d_params)>
 PotentialPairGPU< evaluator, gpu_cgpf >::PotentialPairGPU(boost::shared_ptr<SystemDefinition> sysdef,
                                                           boost::shared_ptr<NeighborList> nlist, const std::string& log_suffix)
-    : PotentialPair<evaluator>(sysdef, nlist, log_suffix), m_block_size(64)
+    : PotentialPair<evaluator>(sysdef, nlist, log_suffix), m_param(0)
     {
     // can't run on the GPU if there aren't any GPUs in the execution configuration
     if (!this->exec_conf->isCUDAEnabled())
@@ -127,6 +146,29 @@ PotentialPairGPU< evaluator, gpu_cgpf >::PotentialPairGPU(boost::shared_ptr<Syst
                   << std::endl;
         throw std::runtime_error("Error initializing PotentialPairGPU");
         }
+
+    // initialize autotuner
+    // the full block size and threads_per_particle matrix is searched,
+    // encoded as block_size*10000 + threads_per_particle
+    std::vector<unsigned int> valid_params;
+    for (unsigned int block_size = 32; block_size <= 1024; block_size += 32)
+        {
+        int s=1;
+        while (s <= this->m_exec_conf->dev_prop.warpSize)
+            {
+            valid_params.push_back(block_size*10000 + s);
+            s = s * 2;
+            }
+        }
+
+    m_tuner.reset(new Autotuner(valid_params, 5, 1e6, "pair_" + evaluator::getName(), this->m_exec_conf));
+    #ifdef ENABLE_MPI
+    // synchronize autotuner results across ranks
+    m_tuner->setSync(this->m_pdata->getDomainDecomposition());
+    #endif
+
+    m_precompute = false;
+    m_has_been_precomputed = false;
     }
 
 template< class evaluator, cudaError_t gpu_cgpf(const pair_args_t& pair_args,
@@ -134,7 +176,13 @@ template< class evaluator, cudaError_t gpu_cgpf(const pair_args_t& pair_args,
 void PotentialPairGPU< evaluator, gpu_cgpf >::computeForces(unsigned int timestep)
     {
     // start by updating the neighborlist
-    this->m_nlist->compute(timestep);
+    if (!m_precompute)
+        this->m_nlist->compute(timestep);
+
+    // if we have already computed and the neighbor list remains current do not recompute
+    if (!m_precompute && m_has_been_precomputed && !this->m_nlist->hasBeenUpdated(timestep)) return;
+
+    m_has_been_precomputed = false;
 
     // start the profile
     if (this->m_prof) this->m_prof->push(this->exec_conf, this->m_prof_name);
@@ -171,11 +219,16 @@ void PotentialPairGPU< evaluator, gpu_cgpf >::computeForces(unsigned int timeste
     // access flags
     PDataFlags flags = this->m_pdata->getFlags();
 
+    if (! m_param) this->m_tuner->begin();
+    unsigned int param = !m_param ?  this->m_tuner->getParam() : m_param;
+    unsigned int block_size = param / 10000;
+    unsigned int threads_per_particle = param % 10000;
+
     gpu_cgpf(pair_args_t(d_force.data,
                          d_virial.data,
                          this->m_virial.getPitch(),
                          this->m_pdata->getN(),
-                         this->m_pdata->getNGhosts(),
+                         this->m_pdata->getMaxN(),
                          d_pos.data,
                          d_diameter.data,
                          d_charge.data,
@@ -186,13 +239,15 @@ void PotentialPairGPU< evaluator, gpu_cgpf >::computeForces(unsigned int timeste
                          d_rcutsq.data,
                          d_ronsq.data,
                          this->m_pdata->getNTypes(),
-                         m_block_size,
+                         block_size,
                          this->m_shift_mode,
-                         flags[pdata_flag::pressure_tensor] || flags[pdata_flag::isotropic_virial]),
+                         flags[pdata_flag::pressure_tensor] || flags[pdata_flag::isotropic_virial],
+                         threads_per_particle),
              d_params.data);
 
     if (this->exec_conf->isCUDAErrorCheckingEnabled())
         CHECK_CUDA_ERROR();
+    if (!m_param) this->m_tuner->end();
 
     if (this->m_prof) this->m_prof->pop(this->exec_conf);
     }
@@ -206,7 +261,7 @@ template < class T, class Base > void export_PotentialPairGPU(const std::string&
     {
      boost::python::class_<T, boost::shared_ptr<T>, boost::python::bases<Base>, boost::noncopyable >
               (name.c_str(), boost::python::init< boost::shared_ptr<SystemDefinition>, boost::shared_ptr<NeighborList>, const std::string& >())
-              .def("setBlockSize", &T::setBlockSize)
+              .def("setTuningParam",&T::setTuningParam)
               ;
     }
 

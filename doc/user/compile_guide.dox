@@ -1,0 +1,186 @@
+/*
+Highly Optimized Object-oriented Many-particle Dynamics -- Blue Edition
+(HOOMD-blue) Open Source Software License Copyright 2008-2011 Ames Laboratory
+Iowa State University and The Regents of the University of Michigan All rights
+reserved.
+
+HOOMD-blue may contain modifications ("Contributions") provided, and to which
+copyright is held, by various Contributors who have granted The Regents of the
+University of Michigan the right to modify and/or distribute such Contributions.
+
+You may redistribute, use, and create derivate works of HOOMD-blue, in source
+and binary forms, provided you abide by the following conditions:
+
+* Redistributions of source code must retain the above copyright notice, this
+list of conditions, and the following disclaimer both in the code and
+prominently in any materials provided with the distribution.
+
+* Redistributions in binary form must reproduce the above copyright notice, this
+list of conditions, and the following disclaimer in the documentation and/or
+other materials provided with the distribution.
+
+* All publications and presentations based on HOOMD-blue, including any reports
+or published results obtained, in whole or in part, with HOOMD-blue, will
+acknowledge its use according to the terms posted at the time of submission on:
+http://codeblue.umich.edu/hoomd-blue/citations.html
+
+* Any electronic documents citing HOOMD-Blue will link to the HOOMD-Blue website:
+http://codeblue.umich.edu/hoomd-blue/
+
+* Apart from the above required attributions, neither the name of the copyright
+holder nor the names of HOOMD-blue's contributors may be used to endorse or
+promote products derived from this software without specific prior written
+permission.
+
+Disclaimer
+
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDER AND CONTRIBUTORS ``AS IS'' AND
+ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, AND/OR ANY
+WARRANTIES THAT THIS SOFTWARE IS FREE OF INFRINGEMENT ARE DISCLAIMED.
+
+IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT,
+INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
+BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
+LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE
+OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
+ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+*/
+
+
+
+/*!
+\page page_compile_guide Compiling HOOMD-blue
+
+Table of contents:
+- \ref sec_software_req
+- \ref sec_build_instructions
+- \ref sec_build_options
+- \ref sec_build_plugin
+<hr>
+
+\section sec_software_req Software Prerequisites
+
+HOOMD-blue requires a number of prerequisite software packages and libraries. Detailed instructions on installing these
+on the various platforms that hoomd supports are included below: \ref sec_build_instructions.
+
+- Required to compile:
+    - Python >= 2.6
+    - boost >= 1.39.0
+    - CMake >= 2.6.2
+    - C++ Compiler
+    - CUDA Toolkit >= 5.0
+- For parallel builds
+    - MPI (generic, or with CUDA-Support: MVAPICH2 >= 1.8, OpenMPI >= 1.7)
+- Useful developer tools
+    - Git >= 1.7.0
+    - Doxygen  >= 1.8.5
+
+For a discussion of which kind of MPI library is best for your situation, see \ref sec_mpi_best_practices.
+See \ref sec_build_linux_generic_mpi for instructions on building an MPI enabled hoomd.
+<hr>
+\section sec_build_instructions Build instructions
+
+Detailed instructions are organized into separate pages.
+- \subpage page_compile_guide_mac
+- \subpage page_compile_guide_linux_centos
+- \subpage page_compile_guide_linux_fedora
+- \subpage page_compile_guide_linux_opensuse
+- \subpage page_compile_guide_linux_ubuntu
+- \subpage page_compile_guide_linux_generic
+
+<hr>
+\section sec_build_options Build options
+Here is a list of all the build options that can be changed by CMake. To changes these settings, cd to your <i>build</i>
+directory and run
+~~~~
+$ ccmake .
+~~~~
+After changing an option, press *c* to configure then press *g* to generate. The makefile/IDE project is now updated with
+the newly selected options.
+- **BUILD_TESTING** - Enables the compilation of unit tests
+- **CMAKE_BUILD_TYPE** - sets the build type (case sensitive)
+    - **Debug** - Compiles debug information into the library and executables.
+       Enables asserts to check for programming mistakes. HOOMD-blue will run
+       \e very slow if compiled in Debug mode, but problems are easier to
+       identify.
+    - **RelWithDebInfo** - Compiles with optimizations and debug symbols. Useful for profiling benchmarks.
+    - **Release** - All compiler optimizations are enabled and asserts are removed.
+       Recommended for production builds: required for any benchmarking.
+- **ENABLE_CUDA** - Enable compiling of the GPU accelerated computations using CUDA. Defaults *on* if the CUDA toolkit
+    is found. Defaults *off* if the CUDA toolkit is not found.
+- **ENABLE_DOXYGEN** - enables the generation of detailed user and developer documentation (Defaults *off*)
+- **ENABLE_OCELOT** - compiles hoomd against ocelot instead of the CUDA runtime
+- **ENABLE_VALGRIND** - Runs every unit test through valgrind.
+- **ENABLE_ZLIB** - Links hoomd to libz (must be available) and enables direct writing of zlib compressed files from dump.bin
+- **SINGLE_PRECISION** - Controls precision
+    - When set to \b ON, all calculations are performed in single precision.
+    - When set to \b OFF, all calculations are performed in double precision.
+- **ENABLE_MPI** - Enable multi-processor/GPU simulations using MPI
+    - When set to \b ON (default if any MPI library is found automatically by CMake), multi-GPU simulations are supported
+    - When set to \b OFF, HOOMD always runs in single-GPU mode
+- **ENABLE_MPI_CUDA** - Enable CUDA-aware MPI library support
+    - Requires a MPI library with CUDA support to be installed
+    - When set to \b ON (default if a CUDA-aware MPI library is detected), HOOMD-blue will make use of  the capability of the MPI library to accelerate CUDA-buffer transfers
+    - When set to \b OFF, standard MPI calls will be used
+    - *Warning:* Manually setting this feature to ON when the MPI library does not support CUDA may
+      result in a crash of HOOMD-blue
+
+There are a few options for controlling the CUDA compilation.
+- **CUDA_ARCH_LIST** - A semicolon separated list of GPU architecture to compile in. Portions of HOOMD are optimized for specific
+                   hardware architectures, but those optimizations are only activated when they are compiled in.
+                   By default, all known architectures supported by the installed CUDA toolkit are activated in the list.
+                   There is no disadvantage to doing so, except perhaps a slightly larger executable size and compile times.
+                   The CUDA programming guide contains list of which GPUs are which compute version in Appendix A.
+                   Note: nvcc does not treat sm_21 differently from sm_20. 21
+                   should not be added to CUDA_ARCH_LIST.
+- **CUDA_BUILD_CUBIN** - Enables a display of register usage for each kernel compiled.
+- **NVCC_FLAGS** - Allows additional flags to be passed to nvcc.
+
+\section sec_build_plugin Building a plugin for HOOMD-blue
+
+There are several methods that can be used to build code that interfaces with hoomd.
+
+### Method 1: Write a full-fledged plugin in python only
+
+Some plugins can be implemented fully in python, providing high-level code for configuring or running simulations.
+
+In order to use such a plugin, one must first:
+-# Compile hoomd normally
+-# `make install` hoomd to a desired location
+-# Add `hoomd_install_location/bin` to your `PATH` as usual
+
+Create a directory to contain the python module for the plugin:
+~~~~
+cd hoomd_install_location/lib/hoomd/python-module/hoomd_plugins
+mkdir plugin_name
+cd plugin_name
+touch __init__.py
+~~~~
+
+You should develop your plugin in a directory outside hoomd_install_location
+and using a revision control software. You would not want to loose the code you've written when hoomd is uninstalled!
+In this case, you can just copy the module to the hoomd-plugins directory to install it.
+~~~~
+cp -R plugin_name hoomd_install_location/lib/hoomd/python-module/hoomd_plugins
+~~~~
+
+Once the plugin is written and installed, it can be used in a hoomd script like so:
+~~~~
+from hoomd_script import *
+from hoomd_plugins import plugin_name
+
+init.whatever(...)
+plugin_name.whatever(...)
+~~~~
+
+### Method 2: Write a full-fledged plugin with C++ code included
+
+For high performance, execution on the GPU, or other reasons, part of a plugin can be written in C++. To write a plugin
+that incorporates such code, `make install` hoomd as normal. Then copy the
+directory `hoomd_install_location/share/hoomd/plugin_template_cpp` to a new working space and modify it to implement your
+plugin. See the README file in that directory for full documentation. Examples of new pair and bond potentials
+are available in `hoomd_install_location/share/hoomd/plugin_template_evaluators_ext`
+
+*/

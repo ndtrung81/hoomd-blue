@@ -51,7 +51,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 // Maintainer: joaander
 
 #include <boost/shared_ptr.hpp>
-#include <boost/signals.hpp>
+#include <boost/signals2.hpp>
 #include <vector>
 
 #include "Compute.h"
@@ -273,17 +273,6 @@ class NeighborList : public Compute
         //! Gives an estimate of the number of nearest neighbors per particle
         virtual Scalar estimateNNeigh();
 
-#ifdef ENABLE_MPI
-        //! Returns the width of the ghost layer in every spatial direction
-        Scalar getRGhost()
-            {
-            Scalar rmax = m_r_cut + m_r_buff;
-            if (!m_filter_diameter)
-                rmax += m_d_max - Scalar(1.0);
-            return rmax;
-            }
-#endif
-
         // @}
         //! \name Handle exclusions
         // @{
@@ -402,7 +391,17 @@ class NeighborList : public Compute
         bool peekUpdate(unsigned int timestep);
 #endif
 
-    protected:
+        //! Return true if the neighbor list has been updated this time step
+        /*! \param timestep Current time step
+         *
+         *  This is supposed to be called after a call to compute().
+         */
+        bool hasBeenUpdated(unsigned int timestep)
+            {
+            return m_last_updated_tstep == timestep && m_has_been_updated_once;
+            }
+
+   protected:
         Scalar m_r_cut;             //!< The cuttoff radius
         Scalar m_r_buff;            //!< The buffer around the cuttoff
         Scalar m_d_max;             //!< The maximum diameter of any particle in the system (or greater)
@@ -427,14 +426,18 @@ class NeighborList : public Compute
         Index2D m_ex_list_indexer_tag;         //!< Indexer for accessing the by-tag exclusion list
         bool m_exclusions_set;                 //!< True if any exclusions have been set
 
-        boost::signals::connection m_sort_connection;   //!< Connection to the ParticleData sort signal
-        boost::signals::connection m_max_particle_num_change_connection; //!< Connection to max particle number change signal
-#ifdef ENABLE_MPI
-        boost::signals::connection m_migrate_request_connection; //!< Connection to trigger particle migration
-#endif
+        boost::signals2::connection m_sort_connection;   //!< Connection to the ParticleData sort signal
+        boost::signals2::connection m_max_particle_num_change_connection; //!< Connection to max particle number change signal
+        #ifdef ENABLE_MPI
+        boost::signals2::connection m_migrate_request_connection; //!< Connection to trigger particle migration
+        boost::signals2::connection m_comm_flags_request;         //!< Connection to request ghost particle fields
+        #endif
+
+        //! Return true if we are supposed to do a distance check in this time step
+        bool shouldCheckDistance(unsigned int timestep);
 
         //! Performs the distance check
-        virtual bool distanceCheck();
+        virtual bool distanceCheck(unsigned int timestep);
 
         //! Updates the previous position table for use in the next distance check
         virtual void setLastUpdatedPos();
@@ -448,12 +451,23 @@ class NeighborList : public Compute
         //! Filter the neighbor list of excluded particles
         virtual void filterNlist();
 
+        #ifdef ENABLE_MPI
+        CommFlags getRequestedCommFlags(unsigned int timestep)
+            {
+            // exclusions require ghost particle tags
+            CommFlags flags(0);
+            if (m_exclusions_set) flags[comm_flag::tag] = 1;
+            return flags;
+            }
+        #endif
+
     private:
         int64_t m_updates;              //!< Number of times the neighbor list has been updated
         int64_t m_forced_updates;       //!< Number of times the neighbor list has been foribly updated
         int64_t m_dangerous_updates;    //!< Number of dangerous builds counted
         bool m_force_update;            //!< Flag to handle the forcing of neighborlist updates
         bool m_dist_check;              //!< Set to false to disable distance checks (nlist always built m_every steps)
+        bool m_has_been_updated_once;   //!< True if the neighbor list has been updated at least once
 
         unsigned int m_last_updated_tstep; //!< Track the last time step we were updated
         unsigned int m_last_checked_tstep; //!< Track the last time step we have checked

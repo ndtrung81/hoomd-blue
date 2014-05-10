@@ -166,7 +166,6 @@ void bd_updater_lj_tests(boost::shared_ptr<ExecutionConfiguration> exec_conf)
     boost::shared_ptr<Saru> random = boost::shared_ptr<Saru>(new Saru(seed));
     Scalar temperature = 1.4;
     Scalar KE = Scalar(0.0);
-    Scalar PE = Scalar(0.0);
     Scalar AvgT = Scalar(0);
 
 
@@ -201,7 +200,7 @@ void bd_updater_lj_tests(boost::shared_ptr<ExecutionConfiguration> exec_conf)
                 unsigned int particlei = head + buildingBlock.bonds[j].localidxi;
                 unsigned int particlej = head + buildingBlock.bonds[j].localidxj;
 
-                sysdef->getBondData()->addBond(Bond(0, particlei, particlej));
+                sysdef->getBondData()->addBondedGroup(Bond(0, particlei, particlej));
                 }
 
             iparticle++;
@@ -297,7 +296,6 @@ void bd_updater_lj_tests(boost::shared_ptr<ExecutionConfiguration> exec_conf)
             KE = Scalar(0);
             for (unsigned int j = 0; j < N; j++)
                 KE += Scalar(0.5) * (h_vel.data[j].x*h_vel.data[j].x +h_vel.data[j].y*h_vel.data[j].y + h_vel.data[j].z*h_vel.data[j].z);
-            PE = fc->calcEnergySum();
 
             current_temp = 2.0 * KE / (nrigid_dof + nnonrigid_dof);
             if (i > averaging_delay)
