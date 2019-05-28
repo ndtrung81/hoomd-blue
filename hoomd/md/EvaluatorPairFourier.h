@@ -52,8 +52,8 @@
 */
 struct pair_fourier_params
 {
-  Scalar a[3];      //!< Fourier component coefficents
-  Scalar b[3];      //!< Fourier component coefficents
+  Scalar a[9];      //!< Fourier component coefficents
+  Scalar b[9];      //!< Fourier component coefficents
 };
 
 class EvaluatorPairFourier
@@ -105,7 +105,7 @@ class EvaluatorPairFourier
             if (rsq < rcutsq)
                 {
                 Scalar half_period = fast::sqrt(rcutsq);
-		Scalar period_scale = M_PI / half_period;
+                Scalar period_scale = M_PI / half_period;
                 Scalar r = fast::sqrt(rsq);
                 Scalar x = r * period_scale;
                 Scalar r1inv = Scalar(1)/r;
@@ -114,7 +114,8 @@ class EvaluatorPairFourier
                 Scalar r12inv = r3inv * r3inv * r3inv * r3inv;
                 Scalar a1 = 0;
                 Scalar b1 = 0;
-                for (int i=2; i<5; i++)
+                const int DEGREE = 10
+                for (int i=2; i<=DEGREE; i++)
                     {
                     a1 = a1 + fast::pow(Scalar(-1),Scalar(i)) * params.a[i-2];
                     b1 = b1 + i * fast::pow(Scalar(-1),Scalar(i)) * params.b[i-2];
@@ -126,7 +127,7 @@ class EvaluatorPairFourier
                 Scalar fourier_part = a1 * c + b1 * s;
                 force_divr = a1 * s - b1 * c;
 
-                for (int i=2; i<5; i++)
+                for (int i=2; i<=DEGREE; i++)
                     {
                     theta = Scalar(i) * x;
                     fast::sincos(theta, s, c);

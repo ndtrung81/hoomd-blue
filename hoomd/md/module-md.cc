@@ -125,8 +125,9 @@ void export_tersoff_params(py::module& m)
 //! Function to make the parameter type
 DEVICE inline pair_fourier_params make_pair_fourier_params(py::list a, py::list b)
     {
+    const int DEGREE = 10
     pair_fourier_params retval;
-    for (int i = 0; i < 3; ++i)
+    for (int i = 0; i<DEGREE-1; ++i)
         {
         retval.a[i] = py::cast<Scalar>(a[i]);
         retval.b[i] = py::cast<Scalar>(b[i]);
