@@ -114,7 +114,7 @@ class EvaluatorPairFourier
                 Scalar r12inv = r3inv * r3inv * r3inv * r3inv;
                 Scalar a1 = 0;
                 Scalar b1 = 0;
-                const int DEGREE = 10
+                const int DEGREE = 10;
                 for (int i=2; i<=DEGREE; i++)
                     {
                     a1 = a1 + fast::pow(Scalar(-1),Scalar(i)) * params.a[i-2];

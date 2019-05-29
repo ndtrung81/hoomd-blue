@@ -10,6 +10,8 @@ from hoomd import md
 context.initialize()
 
 # md.pair.fourier
+
+
 class pair_fourier_test (unittest.TestCase):
     def setUp(self):
         print
@@ -24,16 +26,28 @@ class pair_fourier_test (unittest.TestCase):
 
     def test_pair_fourier_value(self):
         fourier = md.pair.fourier(r_cut=3.0, nlist=self.nl)
-        fourier_a = [0.08658918, -0.00177933, -0.0886236]
-        fourier_b = [-0.18217308, -0.04460936, 0.06499778]
+        # for degree 3
+        # fourier_a = [0.08658918, -0.00177933, -0.0886236]
+        # fourier_b = [-0.18217308, -0.04460936, 0.06499778]
+        # for degree 9
+        fourier_a = [-0.024796, 0.03769, -0.024905, -0.052127, 0.000152, 0.002148,
+                     0.079825, 0.077809, -0.026022]
+        fourier_b = [-0.001565, 0.023259, 0.017786, -0.05686, 0.020877, -0.06264,
+                     -0.022973, -0.015669, -0.023028]
         fourier.pair_coeff.set('A', 'A', fourier_a=fourier_a, fourier_b=fourier_b)
         md.integrate.mode_standard(dt=0.0)
         md.integrate.nve(group=group.all())
         run(1)
-        force_x = 0.03626212555489912
-        force_y = 0.05439318833234869
-        force_z = 0.07252425110979825
-        energy = -0.03563268310097793
+        # for degree 3
+        # force_x = 0.03626212555489912
+        # force_y = 0.05439318833234869
+        # force_z = 0.07252425110979825
+        # energy = -0.03563268310097793
+        # for degree 9
+        force_x = -0.02479345967187532
+        force_y = -0.03719018950781298
+        force_z = -0.04958691934375064
+        energy = 0.17163720524702944
         force_fourier_1 = self.system.particles[0].net_force
         potential_fourier_1 = self.system.particles[0].net_energy
         print(force_fourier_1)
