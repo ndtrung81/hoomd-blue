@@ -141,8 +141,8 @@ class _integrator(hoomd.meta._metadata):
             self.cpp_integrator.removeAllIntegrationMethods();
 
             if len(hoomd.context.current.integration_methods) == 0:
-                hoomd.context.msg.error('This integrator requires that one or more integration methods be specified.\n');
-                raise RuntimeError('Error initializing integrator methods');
+                hoomd.context.msg.warning('There is no integration method enabled with this integrator.\n');
+                #raise RuntimeError('Error initializing integrator methods');
 
             for m in hoomd.context.current.integration_methods:
                 self.cpp_integrator.addIntegrationMethod(m.cpp_method);
